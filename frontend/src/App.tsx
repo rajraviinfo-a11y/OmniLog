@@ -1,15 +1,38 @@
 import { useState } from 'react';
-import { Mic, Image as ImageIcon, Send, Flame, Wallet, ShoppingBag } from 'lucide-react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Mic, Image as ImageIcon, Send } from 'lucide-react';
+import { useAI } from './hooks/useAI';
+
+import Dashboard from './screens/Dashboard';
+import Inventory from './screens/Inventory';
+import Expenses from './screens/Expenses';
+import Diet from './screens/Diet';
+import BottomNav from './components/BottomNav';
 
 function App() {
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
+  const { processing, submitInput } = useAI();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
-    console.log('Sending to AI parser:', inputText);
-    setInputText('');
+    
+    try {
+      const result = await submitInput(inputText);
+      console.log('AI Parsed:', result);
+      
+      // Auto-navigate based on category
+      if (result.parsed_intent.category === 'Expense') navigate('/expenses');
+      if (result.parsed_intent.category === 'Inventory') navigate('/inventory');
+      if (result.parsed_intent.category === 'Consumption') navigate('/diet');
+      
+    } catch (err) {
+      console.error('Failed to parse input', err);
+    } finally {
+      setInputText('');
+    }
   };
 
   return (
@@ -21,69 +44,16 @@ function App() {
         </div>
       </header>
 
-      <main>
-        {/* Diet Macros Card */}
-        <div className="glass-card">
-          <div className="card-header">
-            <h2 className="card-title">
-              <Flame size={20} color="#ec4899" />
-              Remaining Macros
-            </h2>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Today</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#8b5cf6', fontSize: '20px', fontWeight: 'bold' }}>50g</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Protein</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#ec4899', fontSize: '20px', fontWeight: 'bold' }}>120g</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Carbs</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#f59e0b', fontSize: '20px', fontWeight: 'bold' }}>45g</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Fat</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Expenses Card */}
-        <div className="glass-card">
-          <div className="card-header">
-            <h2 className="card-title">
-              <Wallet size={20} color="#10b981" />
-              Recent Expenses
-            </h2>
-          </div>
-          <div className="card-value" style={{ color: '#10b981' }}>$1,240.50</div>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            Next daily need: Cooking Gas in 3 days
-          </p>
-        </div>
-
-        {/* Inventory Quick Glance */}
-        <div className="glass-card">
-          <div className="card-header">
-            <h2 className="card-title">
-              <ShoppingBag size={20} color="#f59e0b" />
-              Inventory Alerts
-            </h2>
-          </div>
-          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-primary)' }}>Milk (2L)</span>
-              <span style={{ color: '#ef4444', fontSize: '12px', background: 'rgba(239, 68, 68, 0.2)', padding: '2px 8px', borderRadius: '12px' }}>Low</span>
-            </li>
-            <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--text-primary)' }}>Rice (5kg)</span>
-              <span style={{ color: '#10b981', fontSize: '12px', background: 'rgba(16, 185, 129, 0.2)', padding: '2px 8px', borderRadius: '12px' }}>Good</span>
-            </li>
-          </ul>
-        </div>
+      <main className="content-area">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/expenses" element={<Expenses />} />
+          <Route path="/diet" element={<Diet />} />
+        </Routes>
       </main>
 
-      {/* Unified AI Input Bar */}
-      <div className="input-bar-container">
+      <div className="input-bar-container" style={{ bottom: '80px' }}>
         <form className={`input-bar ${isListening ? 'listening' : ''}`} onSubmit={handleSubmit}>
           <button type="button" className="icon-btn">
             <ImageIcon size={20} />
@@ -91,13 +61,14 @@ function App() {
           
           <input 
             type="text" 
-            placeholder="Log expense, meal, or grocery..." 
+            placeholder={processing ? "Processing..." : "Log expense, meal, or grocery..."}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
+            disabled={processing}
           />
           
           {inputText ? (
-            <button type="submit" className="primary-btn">
+            <button type="submit" className="primary-btn" disabled={processing}>
               <Send size={18} />
             </button>
           ) : (
@@ -111,6 +82,8 @@ function App() {
           )}
         </form>
       </div>
+
+      <BottomNav />
     </div>
   )
 }

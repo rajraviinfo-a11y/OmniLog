@@ -2,3 +2,9 @@ node_modules/
 dist/
 .env
 .DS_Store
+*.db
+*.db-journal
+backend/prisma/dev.db
+frontend/dist/
+backend/dist/
+shared/dist/

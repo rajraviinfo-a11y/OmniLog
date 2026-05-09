@@ -3,15 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
 }
 
 model User {
   id           String    @id @default(uuid())
   name         String
   email        String    @unique
-  role         Role      @default(MEMBER)
+  role         String    @default("MEMBER") // ADMIN, MEMBER
   ai_credits   Int       @default(0)
   household_id String
   household    Household @relation(fields: [household_id], references: [id])
@@ -25,7 +24,7 @@ model User {
 model Household {
   id                String       @id @default(uuid())
   name              String
-  subscription_tier Subscription @default(FREE)
+  subscription_tier String       @default("FREE") // FREE, PRO
   users             User[]
   inventory         Inventory[]
   expenses          Expense[]
@@ -39,7 +38,7 @@ model Inventory {
   household_id   String
   household      Household @relation(fields: [household_id], references: [id])
   item_name      String
-  quantity       Decimal   @db.Decimal(10, 2)
+  quantity       Float
   unit           String
   category       String?
   last_restocked DateTime  @default(now())
@@ -53,7 +52,7 @@ model Expense {
   household    Household @relation(fields: [household_id], references: [id])
   user_id      String
   user         User      @relation(fields: [user_id], references: [id])
-  amount       Decimal   @db.Decimal(10, 2)
+  amount       Float
   category     String
   description  String?
   is_settled   Boolean   @default(false)
@@ -68,44 +67,22 @@ model DietLog {
   user       User     @relation(fields: [user_id], references: [id])
   meal_name  String
   calories   Int?
-  macros     Json?
+  macros     String?  // Store as stringified JSON: '{"protein": 10, "carbs": 20}'
   timestamp  DateTime @default(now())
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
 
 model Reminder {
-  id           String       @id @default(uuid())
+  id           String    @id @default(uuid())
   household_id String
-  household    Household    @relation(fields: [household_id], references: [id])
+  household    Household @relation(fields: [household_id], references: [id])
   user_id      String?
-  user         User?        @relation(fields: [user_id], references: [id])
-  type         ReminderType
+  user         User?     @relation(fields: [user_id], references: [id])
+  type         String    // INVENTORY, DIET, CUSTOM
   message      String
   trigger_time DateTime
-  status       Status       @default(PENDING)
-  created_at   DateTime     @default(now())
-  updated_at   DateTime     @updatedAt
-}
-
-enum Role {
-  ADMIN
-  MEMBER
-}
-
-enum Subscription {
-  FREE
-  PRO
-}
-
-enum ReminderType {
-  INVENTORY
-  DIET
-  CUSTOM
-}
-
-enum Status {
-  PENDING
-  TRIGGERED
-  COMPLETED
+  status       String    @default("PENDING") // PENDING, TRIGGERED, COMPLETED
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
 }
