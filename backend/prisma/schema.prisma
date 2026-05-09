@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  role         Role      @default(MEMBER)
+  ai_credits   Int       @default(0)
+  household_id String
+  household    Household @relation(fields: [household_id], references: [id])
+  expenses     Expense[]
+  diet_logs    DietLog[]
+  reminders    Reminder[]
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+}
+
+model Household {
+  id                String       @id @default(uuid())
+  name              String
+  subscription_tier Subscription @default(FREE)
+  users             User[]
+  inventory         Inventory[]
+  expenses          Expense[]
+  reminders         Reminder[]
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
+}
+
+model Inventory {
+  id             String    @id @default(uuid())
+  household_id   String
+  household      Household @relation(fields: [household_id], references: [id])
+  item_name      String
+  quantity       Decimal   @db.Decimal(10, 2)
+  unit           String
+  category       String?
+  last_restocked DateTime  @default(now())
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+}
+
+model Expense {
+  id           String    @id @default(uuid())
+  household_id String
+  household    Household @relation(fields: [household_id], references: [id])
+  user_id      String
+  user         User      @relation(fields: [user_id], references: [id])
+  amount       Decimal   @db.Decimal(10, 2)
+  category     String
+  description  String?
+  is_settled   Boolean   @default(false)
+  timestamp    DateTime  @default(now())
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+}
+
+model DietLog {
+  id         String   @id @default(uuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  meal_name  String
+  calories   Int?
+  macros     Json?
+  timestamp  DateTime @default(now())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Reminder {
+  id           String       @id @default(uuid())
+  household_id String
+  household    Household    @relation(fields: [household_id], references: [id])
+  user_id      String?
+  user         User?        @relation(fields: [user_id], references: [id])
+  type         ReminderType
+  message      String
+  trigger_time DateTime
+  status       Status       @default(PENDING)
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum Subscription {
+  FREE
+  PRO
+}
+
+enum ReminderType {
+  INVENTORY
+  DIET
+  CUSTOM
+}
+
+enum Status {
+  PENDING
+  TRIGGERED
+  COMPLETED
+}
